@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from src.models import Article
+from sqlalchemy import select
 
 async def create_article(
     db: AsyncSession,
@@ -57,6 +58,12 @@ async def update_article(
     await db.commit()
     await db.refresh(article)
     return article
+
+async def list_articles(db: AsyncSession, page: int = 1, per_page: int = 15):
+    offset = (page - 1) * per_page
+    result = await db.execute(select(Article).offset(offset).limit(per_page))
+    articles = result.scalars().all()
+    return articles, None, None
 
 
 async def delete_article(db: AsyncSession, slug: str, user_id: int):

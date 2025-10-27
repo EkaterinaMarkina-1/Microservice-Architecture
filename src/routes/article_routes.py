@@ -25,8 +25,11 @@ async def list_articles(
     per_page: int = Query(15, ge=1, le=50),
     db: AsyncSession = Depends(get_db)
 ):
-    articles, _, _ = await articles_ctrl.list_articles(db, page, per_page)
-    return [{"slug": a.slug, "title": a.title, "author_id": a.author_id} for a in articles]
+    try:
+        articles, _, _ = await articles_ctrl.list_articles(db, page, per_page)
+        return [{"slug": a.slug, "title": a.title, "author_id": a.author_id} for a in articles]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка получения статей: {str(e)}")
 
 @router.get("/{slug}", response_model=dict)
 async def get_article(slug: str, db: AsyncSession = Depends(get_db)):

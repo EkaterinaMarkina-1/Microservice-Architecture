@@ -1,46 +1,38 @@
+import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
+from dotenv import load_dotenv
 
-# -------------------------
-# Конфигурация базы данных
-# -------------------------
-DATABASE_URL = "postgresql+asyncpg://user:password@localhost:5432/dbname"
+# Загружаем переменные из .env
+load_dotenv()
 
-# База для моделей
+DATABASE_URL = os.getenv("DATABASE_URL")
+
 Base = declarative_base()
 
-# Асинхронный движок
 engine = create_async_engine(
     DATABASE_URL,
-    echo=True,  # лог SQL запросов
+    echo=True,
     future=True,
 )
 
-# Асинхронная сессия
 async_session = sessionmaker(
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False
 )
 
-# Dependency для FastAPI
 async def get_db() -> AsyncSession:
     async with async_session() as session:
         yield session
 
-# -------------------------
-# Асинхронная инициализация
-# -------------------------
 async def init_db():
     """Создаёт все таблицы при старте приложения"""
     try:
-        # Импорт моделей внутри функции, чтобы избежать циклического импорта
-        from src.models import User, Article, Comment, Tag, article_tags
-
+        from src.models import User, Article, Comment, Tag, article_tags  # импорт моделей здесь
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-
         print("База данных инициализирована успешно!")
     except SQLAlchemyError as e:
         print(f"Ошибка при инициализации базы: {e}")
