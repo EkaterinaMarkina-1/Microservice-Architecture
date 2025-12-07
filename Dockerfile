@@ -1,4 +1,3 @@
-# Базовый образ
 FROM python:3.11-slim
 
 # Отключаем генерацию .pyc и включаем буферизацию вывода
@@ -8,8 +7,11 @@ ENV PYTHONUNBUFFERED=1
 # Рабочая директория внутри контейнера
 WORKDIR /app
 
-# Устанавливаем системные зависимости для psycopg2 и сборки пакетов
-RUN apt-get update && apt-get install -y \
+# ----------------------------
+# Устанавливаем только необходимые системные зависимости
+# Используем --no-install-recommends для экономии памяти
+# ----------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     gcc \
@@ -18,21 +20,33 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
+# ----------------------------
 # Копируем только requirements для кеширования слоев Docker
+# ----------------------------
 COPY requirements.txt .
 
+# ----------------------------
 # Обновляем pip и устанавливаем зависимости Python
-RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+# ----------------------------
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
+# ----------------------------
 # Копируем весь проект в контейнер
+# ----------------------------
 COPY . .
 
+# ----------------------------
 # Делаем entrypoint исполняемым
+# ----------------------------
 RUN chmod +x entrypoint.sh
 
+# ----------------------------
 # Открываем порт
+# ----------------------------
 EXPOSE 8000
 
+# ----------------------------
 # Стартуем через entrypoint.sh
+# ----------------------------
 ENTRYPOINT ["./entrypoint.sh"]

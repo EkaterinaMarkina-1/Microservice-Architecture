@@ -1,5 +1,5 @@
 from src.models import *
-from src.db import Base, DATABASE_URL
+from src.database import Base, DATABASE_URL
 import asyncio
 from logging.config import fileConfig
 import os

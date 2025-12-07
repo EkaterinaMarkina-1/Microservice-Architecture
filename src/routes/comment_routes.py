@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database import get_db
+from src.database import get_async_session
 from src.controllers import comment_controller, article_controller
 from src.schemas.comment_schemas import CommentCreate, CommentOut
 from src.utils.auth import get_current_user_id, check_author
@@ -17,7 +17,7 @@ router = APIRouter(
 async def create_comment(
     slug: str,
     data: CommentCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     user_id: int = Depends(get_current_user_id)
 ):
     article = await article_controller.get_article_by_slug(db, slug)
@@ -35,7 +35,7 @@ async def create_comment(
 @router.get("/", response_model=List[CommentOut])
 async def get_comments(
     slug: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ):
     article = await article_controller.get_article_by_slug(db, slug)
     return await comment_controller.get_comments_for_article(db, article.id)
@@ -45,7 +45,7 @@ async def get_comments(
 async def delete_comment(
     slug: str,
     comment_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     user_id: int = Depends(get_current_user_id)
 ):
     # Проверяем, что статья существует
