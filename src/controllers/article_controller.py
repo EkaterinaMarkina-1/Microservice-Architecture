@@ -1,7 +1,30 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from fastapi import HTTPException
-from src.models import Article
-from sqlalchemy import select
+
+from src.models import Article, Tag
+from src.utils.slug import slugify
+
+
+async def _process_tags(db: AsyncSession, tag_list: list | None):
+    """Возвращает список Tag объектов, создавая недостающие."""
+    if not tag_list:
+        return []
+
+    tags = []
+    for tag_name in tag_list:
+        q = await db.execute(select(Tag).where(Tag.name == tag_name))
+        tag = q.scalar_one_or_none()
+
+        if not tag:
+            tag = Tag(name=tag_name)
+            db.add(tag)
+            await db.flush()
+
+        tags.append(tag)
+
+    return tags
+
 
 async def create_article(
     db: AsyncSession,
@@ -11,14 +34,26 @@ async def create_article(
     body: str,
     tag_list: list | None = None
 ) -> Article:
+
+    slug = slugify(title)
+
+    # Проверяем уникальность slug
+    q = await db.execute(select(Article).where(Article.slug == slug))
+    if q.scalar_one_or_none():
+        raise HTTPException(
+            status_code=400, detail="Статья с таким названием уже существует")
+
+    tags = await _process_tags(db, tag_list)
+
     article = Article(
         author_id=user_id,
         title=title,
         description=description,
         body=body,
-        slug=generate_slug(title),
-        tags=tag_list or []
+        slug=slug,
+        tags=tags
     )
+
     db.add(article)
     await db.commit()
     await db.refresh(article)
@@ -43,33 +78,47 @@ async def update_article(
     tag_list: list | None = None
 ) -> Article:
     article = await get_article_by_slug(db, slug)
-    if article.author_id != user_id:
-        raise HTTPException(status_code=403, detail="Нет доступа для изменения статьи")
 
-    if title is not None:
+    if article.author_id != user_id:
+        raise HTTPException(status_code=403, detail="Нет доступа")
+
+    if title:
         article.title = title
-    if description is not None:
+        article.slug = slugify(title)
+
+    if description:
         article.description = description
-    if body is not None:
+
+    if body:
         article.body = body
+
     if tag_list is not None:
-        article.tags = tag_list
+        article.tags = await _process_tags(db, tag_list)
 
     await db.commit()
     await db.refresh(article)
     return article
 
-async def list_articles(db: AsyncSession, page: int = 1, per_page: int = 15):
-    offset = (page - 1) * per_page
-    result = await db.execute(select(Article).offset(offset).limit(per_page))
-    articles = result.scalars().all()
-    return articles, None, None
-
 
 async def delete_article(db: AsyncSession, slug: str, user_id: int):
     article = await get_article_by_slug(db, slug)
+
     if article.author_id != user_id:
-        raise HTTPException(status_code=403, detail="Нет доступа для удаления статьи")
+        raise HTTPException(status_code=403, detail="Нет доступа")
 
     await db.delete(article)
     await db.commit()
+
+
+async def list_articles(db: AsyncSession, page: int = 1, per_page: int = 15):
+    offset = (page - 1) * per_page
+
+    q = await db.execute(select(Article))
+    total = len(q.scalars().all())
+
+    q = await db.execute(
+        select(Article).offset(offset).limit(per_page)
+    )
+    articles = q.scalars().all()
+
+    return articles, total, page

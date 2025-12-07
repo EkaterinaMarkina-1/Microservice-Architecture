@@ -1,97 +1,100 @@
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.models import User
-from src.utils.security import hash_password, verify_password
+
+from src.database import get_db
+from src.schemas.user_schemas import (
+    UserCreate,
+    UserLogin,
+    UserUpdate,
+    UserOut,
+    TokenResponse,
+)
+from src.schemas.common import DeleteResponse
+from src.controllers import user_controller
+from src.utils.auth import get_current_user_id
+from src.utils.security import create_access_token
+
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
-async def create_user(
-    db: AsyncSession,
-    email: str,
-    username: str,
-    password: str,
-    bio: Optional[str] = None,
-    image_url: Optional[str] = None
-) -> User:
-    existing = await get_user_by_email(db, email)
-    if existing:
-        raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
 
-    user = User(
-        email=email,
-        username=username,
-        password=hash_password(password),
-        bio=bio,
-        image_url=image_url
+# ---------- REGISTER ----------
+async def register_user_dependency(
+    user_data: UserCreate,
+    db: AsyncSession = Depends(get_db)
+) -> UserOut:
+    new_user = await user_controller.create_user(db, user_data)
+    return UserOut.model_validate(new_user, from_attributes=True)
+
+
+@router.post("", response_model=UserOut, status_code=201,
+             summary="Зарегистрировать нового пользователя")
+async def register(payload: UserOut = Depends(register_user_dependency)):
+    return payload
+
+
+# ---------- LOGIN ----------
+async def login_user_dependency(
+    login_data: UserLogin,
+    db: AsyncSession = Depends(get_db)
+) -> TokenResponse:
+    user = await user_controller.authenticate_user(db, login_data.email, login_data.password)
+    token = create_access_token({"sub": str(user.id)})
+    return TokenResponse(access_token=token)
+
+
+@router.post("/login", response_model=TokenResponse,
+             summary="Войти в систему")
+async def login(payload: TokenResponse = Depends(login_user_dependency)):
+    return payload
+
+
+# ---------- GET CURRENT USER ----------
+async def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
+    if not token:
+        raise HTTPException(status_code=403, detail="Not authenticated")
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=403, detail="Invalid token")
+        return int(user_id)
+
+    except JWTError:
+        raise HTTPException(status_code=403, detail="Invalid token")
+
+
+# ---------- UPDATE CURRENT USER ----------
+async def update_current_user_dependency(
+    update_data: UserUpdate,
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+) -> UserOut:
+    updated = await user_controller.update_user(
+        db,
+        user_id,
+        **update_data.dict(exclude_unset=True)
     )
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-    return user
+    return UserOut.model_validate(updated, from_attributes=True)
 
 
-async def get_user_by_id(db: AsyncSession, user_id: int) -> User:
-    q = await db.execute(select(User).where(User.id == user_id))
-    user = q.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
-    return user
+@router.put("/me", response_model=UserOut,
+            summary="Обновить текущего пользователя")
+async def update_user(payload: UserOut = Depends(update_current_user_dependency)):
+    return payload
 
 
-async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
-    q = await db.execute(select(User).where(User.email == email))
-    return q.scalar_one_or_none()
+# ---------- DELETE CURRENT USER ----------
+async def delete_current_user_dependency(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+) -> DeleteResponse:
+    await user_controller.delete_user(db, user_id)
+    return DeleteResponse(detail="Пользователь удалён")
 
 
-async def get_user_by_username(db: AsyncSession, username: str) -> Optional[User]:
-    q = await db.execute(select(User).where(User.username == username))
-    return q.scalar_one_or_none()
-
-
-async def get_all_users(db: AsyncSession) -> List[User]:
-    q = await db.execute(select(User))
-    return q.scalars().all()
-
-
-async def update_user(
-    db: AsyncSession,
-    user_id: int,
-    email: Optional[str] = None,
-    username: Optional[str] = None,
-    password: Optional[str] = None,
-    bio: Optional[str] = None,
-    image_url: Optional[str] = None
-) -> User:
-    user = await get_user_by_id(db, user_id)
-
-    if email is not None:
-        user.email = email
-    if username is not None:
-        user.username = username
-    if password is not None:
-        user.password = hash_password(password)
-    if bio is not None:
-        user.bio = bio
-    if image_url is not None:
-        user.image_url = image_url
-
-    await db.commit()
-    await db.refresh(user)
-    return user
-
-
-async def delete_user(db: AsyncSession, user_id: int):
-    user = await get_user_by_id(db, user_id)
-    await db.delete(user)
-    await db.commit()
-    return {"detail": "Пользователь удалён"}
-
-
-async def authenticate_user(db: AsyncSession, email: str, password: str) -> User:
-    user = await get_user_by_email(db, email)
-    if not user or not verify_password(password, user.password):
-        raise HTTPException(status_code=401, detail="Неверный email или пароль")
-    return user
-
+@router.delete("/me", response_model=DeleteResponse,
+               summary="Удалить текущего пользователя")
+async def delete_user(payload: DeleteResponse = Depends(delete_current_user_dependency)):
+    return payload

@@ -1,13 +1,21 @@
-from fastapi import Header, HTTPException
+from fastapi import HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from src.utils.security import decode_access_token
 
-async def get_current_user_id(authorization: str = Header(...)) -> int:
+security = HTTPBearer()
+
+
+async def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> int:
     """Возвращает ID текущего пользователя из Bearer токена"""
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Требуется токен")
-    token = authorization.split(" ")[1]
+
+    token = credentials.credentials
+
     payload = decode_access_token(token)
-    return payload["sub"]
+    if payload is None:
+        raise HTTPException(status_code=401, detail="Нет доступа")
+
+    return int(payload["sub"])
+
 
 def check_author(obj, user_id: int):
     """Проверка авторства: выбрасывает 403, если пользователь не является автором объекта"""

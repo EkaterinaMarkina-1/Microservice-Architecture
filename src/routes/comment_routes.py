@@ -1,35 +1,45 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.database import get_db
-from src.controllers import comment_controller as comments_ctrl
-from src.controllers import article_controller as articles_ctrl
+from src.controllers import comment_controller, article_controller
+from src.schemas.comment_schemas import CommentCreate, CommentOut
 from src.utils.auth import get_current_user_id, check_author
 
-router = APIRouter(prefix="/api/articles/{slug}/comments", tags=["comments"])
+router = APIRouter(
+    prefix="/api/articles/{slug}/comments",
+    tags=["comments"]
+)
 
-@router.post("/", response_model=dict)
+
+@router.post("/", response_model=CommentOut)
 async def create_comment(
     slug: str,
-    body: str,
+    data: CommentCreate,
     db: AsyncSession = Depends(get_db),
     user_id: int = Depends(get_current_user_id)
 ):
-    article = await articles_ctrl.get_article_by_slug(db, slug)
-    if not article:
-        raise HTTPException(status_code=404, detail="Статья не найдена")
+    article = await article_controller.get_article_by_slug(db, slug)
 
-    comment = await comments_ctrl.create_comment(db, user_id, article.id, body)
-    return {"id": comment.id, "body": comment.body, "author_id": user_id}
+    comment = await comment_controller.create_comment(
+        db,
+        user_id=user_id,
+        article_id=article.id,
+        body=data.body
+    )
 
-@router.get("/", response_model=List[dict])
-async def get_comments(slug: str, db: AsyncSession = Depends(get_db)):
-    article = await articles_ctrl.get_article_by_slug(db, slug)
-    if not article:
-        raise HTTPException(status_code=404, detail="Статья не найдена")
+    return comment
 
-    comments = await comments_ctrl.get_comments_for_article(db, article.id)
-    return [{"id": c.id, "body": c.body, "author_id": c.author_id} for c in comments]
+
+@router.get("/", response_model=List[CommentOut])
+async def get_comments(
+    slug: str,
+    db: AsyncSession = Depends(get_db)
+):
+    article = await article_controller.get_article_by_slug(db, slug)
+    return await comment_controller.get_comments_for_article(db, article.id)
+
 
 @router.delete("/{comment_id}", response_model=dict)
 async def delete_comment(
@@ -38,16 +48,21 @@ async def delete_comment(
     db: AsyncSession = Depends(get_db),
     user_id: int = Depends(get_current_user_id)
 ):
-    article = await articles_ctrl.get_article_by_slug(db, slug)
-    if not article:
-        raise HTTPException(status_code=404, detail="Статья не найдена")
+    # Проверяем, что статья существует
+    article = await article_controller.get_article_by_slug(db, slug)
 
-    comment = await comments_ctrl.get_comment_by_id(db, comment_id)
-    if not comment:
-        raise HTTPException(status_code=404, detail="Комментарий не найден")
+    # Проверяем, что комментарий существует
+    comment = await comment_controller.get_comment_by_id(db, comment_id)
+
+    # Проверяем, что он принадлежит статье
     if comment.article_id != article.id:
-        raise HTTPException(status_code=400, detail="Комментарий не относится к этой статье")
+        raise HTTPException(
+            status_code=400,
+            detail="Комментарий не относится к этой статье"
+        )
 
+    # Проверяем права (автор или админ)
     check_author(comment, user_id)
-    await comments_ctrl.delete_comment(db, comment_id)
+
+    await comment_controller.delete_comment(db, comment_id)
     return {"detail": "Комментарий удалён"}

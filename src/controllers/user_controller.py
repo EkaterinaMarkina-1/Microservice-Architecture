@@ -3,41 +3,42 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models import User
+from src.schemas.user_schemas import UserCreate
 from src.utils.security import hash_password, verify_password
 
 
-async def create_user(
-    db: AsyncSession,
-    email: str,
-    username: str,
-    password: str,
-    bio: Optional[str] = None,
-    image_url: Optional[str] = None
-) -> User:
-    existing = await get_user_by_email(db, email)
+# ------------------ CREATE USER ------------------
+async def create_user(db: AsyncSession, data: UserCreate) -> User:
+    # Проверка на email
+    existing = await get_user_by_email(db, data.email)
     if existing:
-        raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
+        raise HTTPException(
+            status_code=400, detail="Email уже зарегистрирован")
 
-    user = User(
-        email=email,
-        username=username,
-        password=hash_password(password),
-        bio=bio,
-        image_url=image_url
+    new_user = User(
+        email=data.email,
+        username=data.username,
+        password=hash_password(data.password),
+        bio=data.bio,
+        image_url=data.image_url
     )
-    db.add(user)
+
+    db.add(new_user)
     await db.commit()
-    await db.refresh(user)
-    return user
+    await db.refresh(new_user)
+    return new_user
 
 
+# ------------------ LOGIN / AUTH ------------------
 async def authenticate_user(db: AsyncSession, email: str, password: str) -> User:
     user = await get_user_by_email(db, email)
     if not user or not verify_password(password, user.password):
-        raise HTTPException(status_code=401, detail="Неверный email или пароль")
+        raise HTTPException(
+            status_code=401, detail="Неверный email или пароль")
     return user
 
 
+# ------------------ GET USER BY ID ------------------
 async def get_user_by_id(db: AsyncSession, user_id: int) -> User:
     q = await db.execute(select(User).where(User.id == user_id))
     user = q.scalar_one_or_none()
@@ -46,16 +47,19 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> User:
     return user
 
 
+# ------------------ GET USER BY EMAIL ------------------
 async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
     q = await db.execute(select(User).where(User.email == email))
     return q.scalar_one_or_none()
 
 
+# ------------------ GET ALL USERS ------------------
 async def get_all_users(db: AsyncSession) -> List[User]:
     q = await db.execute(select(User))
     return q.scalars().all()
 
 
+# ------------------ UPDATE USER ------------------
 async def update_user(
     db: AsyncSession,
     user_id: int,
@@ -67,15 +71,15 @@ async def update_user(
 ) -> User:
     user = await get_user_by_id(db, user_id)
 
-    if email:
+    if email is not None:
         user.email = email
-    if username:
+    if username is not None:
         user.username = username
-    if password:
+    if password is not None:
         user.password = hash_password(password)
-    if bio:
+    if bio is not None:
         user.bio = bio
-    if image_url:
+    if image_url is not None:
         user.image_url = image_url
 
     await db.commit()
@@ -83,8 +87,8 @@ async def update_user(
     return user
 
 
+# ------------------ DELETE USER ------------------
 async def delete_user(db: AsyncSession, user_id: int):
     user = await get_user_by_id(db, user_id)
     await db.delete(user)
     await db.commit()
-    return {"detail": "Пользователь удалён"}

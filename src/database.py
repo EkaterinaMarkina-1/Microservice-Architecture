@@ -1,3 +1,4 @@
+from typing import AsyncGenerator
 import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
@@ -23,9 +24,11 @@ async_session = sessionmaker(
     expire_on_commit=False
 )
 
-async def get_db() -> AsyncSession:
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session() as session:
         yield session
+
 
 async def init_db():
     """Создаёт все таблицы при старте приложения"""

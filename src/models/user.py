@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from src.database import Base
 
+
 class User(Base):
     __tablename__ = "users"
 
@@ -12,17 +13,20 @@ class User(Base):
     password = Column(String(255), nullable=False)
     bio = Column(Text, nullable=True)
     image_url = Column(String(500), nullable=True)
+
     is_deleted = Column(Boolean, default=False)
     deleted_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow,
+                        onupdate=datetime.utcnow, nullable=False)
 
     articles = relationship(
         "Article",
         back_populates="author",
-        cascade="all, delete-orphan"  
+        cascade="all, delete-orphan"
     )
 
     comments = relationship(
         "Comment",
         back_populates="author",
-        cascade="all, delete-orphan" 
+        cascade="all, delete-orphan"
     )
