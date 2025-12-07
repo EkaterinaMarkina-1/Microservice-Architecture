@@ -1,28 +1,36 @@
 import re
-import unicodedata
+
+# Таблица транслитерации кириллицы в латиницу
+CYRILLIC_MAP = {
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
+    "ж": "zh", "з": "z", "и": "i", "й": "i", "к": "k", "л": "l", "м": "m",
+    "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+    "ф": "f", "х": "kh", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "shch",
+    "ы": "y", "э": "e", "ю": "yu", "я": "ya", "ь": "", "ъ": ""
+}
 
 
 def slugify(text: str) -> str:
     """
     Преобразует строку в URL-friendly slug.
-    Пример:
+
+    Примеры:
         "Микросервисная архитектура!" -> "mikroservisnaya-arkhitektura"
         "Hello World" -> "hello-world"
     """
+    if not text:
+        return ""
 
-    # Normalize unicode (убирает диакритику)
-    text = unicodedata.normalize("NFKD", text)
-
-    # Транслитерация кириллицы в латиницу
-    text = text.encode("ascii", "ignore").decode("ascii")
-
-    # в нижний регистр
+    # В нижний регистр
     text = text.lower()
 
-    # заменяем всё не-буквы/цифры на дефис
+    # Транслитерация кириллицы
+    text = "".join(CYRILLIC_MAP.get(c, c) for c in text)
+
+    # Заменяем всё, что не буквы или цифры, на дефис
     text = re.sub(r"[^a-z0-9]+", "-", text)
 
-    # убираем дефисы по краям и двойные
+    # Убираем дефисы по краям и двойные дефисы
     text = re.sub(r"-{2,}", "-", text).strip("-")
 
     return text

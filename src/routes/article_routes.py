@@ -12,11 +12,17 @@ from src.schemas.article_schemas import (
 )
 from src.utils.auth import get_current_user_id, check_author
 
+router = APIRouter(prefix="/api/articles", tags=["Articles"])
 
-router = APIRouter(prefix="/api/articles", tags=["articles"])
 
-
-@router.post("/", response_model=ArticleOut)
+# ------------------ CREATE ARTICLE ------------------
+@router.post(
+    "/",
+    response_model=ArticleOut,
+    status_code=201,
+    summary="Создание статьи",
+    description="Создает новую статью и связывает её с текущим пользователем."
+)
 async def create_article(
     data: ArticleCreate,
     db: AsyncSession = Depends(get_async_session),
@@ -28,7 +34,13 @@ async def create_article(
     return ArticleOut.model_validate(article)
 
 
-@router.get("/", response_model=List[ArticleListItem])
+# ------------------ LIST ARTICLES ------------------
+@router.get(
+    "/",
+    response_model=List[ArticleListItem],
+    summary="Список статей",
+    description="Возвращает список статей с поддержкой пагинации."
+)
 async def list_articles(
     page: int = Query(1, ge=1),
     per_page: int = Query(15, ge=1, le=50),
@@ -38,13 +50,27 @@ async def list_articles(
     return [ArticleListItem.model_validate(a) for a in articles]
 
 
-@router.get("/{slug}", response_model=ArticleOut)
+# ------------------ GET ARTICLE BY SLUG ------------------
+@router.get(
+    "/{slug}",
+    response_model=ArticleOut,
+    summary="Получение статьи",
+    description="Возвращает статью по уникальному slug."
+)
 async def get_article(slug: str, db: AsyncSession = Depends(get_async_session)):
     article = await ctrl.get_article_by_slug(db, slug)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
     return ArticleOut.model_validate(article)
 
 
-@router.put("/{slug}", response_model=ArticleOut)
+# ------------------ UPDATE ARTICLE ------------------
+@router.put(
+    "/{slug}",
+    response_model=ArticleOut,
+    summary="Обновление статьи",
+    description="Обновляет статью, проверяя права текущего пользователя."
+)
 async def update_article(
     slug: str,
     data: ArticleUpdate,
@@ -52,28 +78,38 @@ async def update_article(
     user_id: int = Depends(get_current_user_id)
 ):
     article = await ctrl.get_article_by_slug(db, slug)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
     check_author(article, user_id)
 
     updated = await ctrl.update_article(
         db,
         slug,
         user_id,
-        data.title,
-        data.description,
-        data.body,
-        data.tagList
+        title=data.title,
+        description=data.description,
+        body=data.body,
+        tag_list=data.tagList
     )
     return ArticleOut.model_validate(updated)
 
 
-@router.delete("/{slug}", response_model=dict)
+# ------------------ DELETE ARTICLE ------------------
+@router.delete(
+    "/{slug}",
+    response_model=dict,
+    summary="Удаление статьи",
+    description="Удаляет статью, если текущий пользователь является автором."
+)
 async def delete_article(
     slug: str,
     db: AsyncSession = Depends(get_async_session),
     user_id: int = Depends(get_current_user_id)
 ):
     article = await ctrl.get_article_by_slug(db, slug)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
     check_author(article, user_id)
 
     await ctrl.delete_article(db, slug, user_id)
-    return {"detail": "Статья удалена"}
+    return {"detail": "Article deleted successfully"}

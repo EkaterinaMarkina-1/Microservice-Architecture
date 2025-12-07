@@ -9,38 +9,43 @@ from src.utils.auth import get_current_user_id, check_author
 
 router = APIRouter(
     prefix="/api/articles/{slug}/comments",
-    tags=["comments"]
+    tags=["Comments"]
 )
 
 
-@router.post("/", response_model=CommentOut)
+# ------------------ CREATE COMMENT ------------------
+@router.post("/", response_model=CommentOut, status_code=201)
 async def create_comment(
     slug: str,
     data: CommentCreate,
     db: AsyncSession = Depends(get_async_session),
     user_id: int = Depends(get_current_user_id)
 ):
+    # Получаем статью
     article = await article_controller.get_article_by_slug(db, slug)
 
+    # Создаём комментарий
     comment = await comment_controller.create_comment(
         db,
         user_id=user_id,
         article_id=article.id,
         body=data.body
     )
-
     return comment
 
 
+# ------------------ LIST COMMENTS ------------------
 @router.get("/", response_model=List[CommentOut])
 async def get_comments(
     slug: str,
     db: AsyncSession = Depends(get_async_session)
 ):
     article = await article_controller.get_article_by_slug(db, slug)
-    return await comment_controller.get_comments_for_article(db, article.id)
+    comments = await comment_controller.get_comments_for_article(db, article.id)
+    return comments
 
 
+# ------------------ DELETE COMMENT ------------------
 @router.delete("/{comment_id}", response_model=dict)
 async def delete_comment(
     slug: str,
@@ -51,10 +56,10 @@ async def delete_comment(
     # Проверяем, что статья существует
     article = await article_controller.get_article_by_slug(db, slug)
 
-    # Проверяем, что комментарий существует
+    # Получаем комментарий
     comment = await comment_controller.get_comment_by_id(db, comment_id)
 
-    # Проверяем, что он принадлежит статье
+    # Проверяем, что комментарий относится к статье
     if comment.article_id != article.id:
         raise HTTPException(
             status_code=400,
