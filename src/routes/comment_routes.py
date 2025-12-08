@@ -23,15 +23,18 @@ async def create_comment(
 ):
     # Получаем статью
     article = await article_controller.get_article_by_slug(db, slug)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
 
     # Создаём комментарий
     comment = await comment_controller.create_comment(
-        db,
+        db=db,
         user_id=user_id,
         article_id=article.id,
         body=data.body
     )
-    return comment
+
+    return CommentOut.model_validate(comment)
 
 
 # ------------------ LIST COMMENTS ------------------
@@ -41,8 +44,11 @@ async def get_comments(
     db: AsyncSession = Depends(get_async_session)
 ):
     article = await article_controller.get_article_by_slug(db, slug)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
     comments = await comment_controller.get_comments_for_article(db, article.id)
-    return comments
+    return [CommentOut.model_validate(c) for c in comments]
 
 
 # ------------------ DELETE COMMENT ------------------
@@ -55,9 +61,13 @@ async def delete_comment(
 ):
     # Проверяем, что статья существует
     article = await article_controller.get_article_by_slug(db, slug)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
 
     # Получаем комментарий
     comment = await comment_controller.get_comment_by_id(db, comment_id)
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
 
     # Проверяем, что комментарий относится к статье
     if comment.article_id != article.id:
@@ -66,7 +76,7 @@ async def delete_comment(
             detail="Комментарий не относится к этой статье"
         )
 
-    # Проверяем права (автор или админ)
+    # Проверяем права (автор)
     check_author(comment, user_id)
 
     await comment_controller.delete_comment(db, comment_id)

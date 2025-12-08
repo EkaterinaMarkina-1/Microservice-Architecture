@@ -1,8 +1,9 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
-
+from src.schemas.common import ORMBaseModel
 
 # ---------- Input Schemas ----------
+
 
 class ArticleBase(BaseModel):
     title: str = Field(..., max_length=300)
@@ -23,7 +24,7 @@ class ArticleUpdate(BaseModel):
 
 # ---------- Output Schemas ----------
 
-class ArticleOut(BaseModel):
+class ArticleOut(ORMBaseModel):
     slug: str
     title: str
     description: str
@@ -31,14 +32,8 @@ class ArticleOut(BaseModel):
     author_id: int
     tagList: List[str] = []
 
-    class Config:
-        from_attributes = True
 
-
-class ArticleListItem(BaseModel):
+class ArticleListItem(ORMBaseModel):
     slug: str
     title: str
     author_id: int
-
-    class Config:
-        from_attributes = True

@@ -29,7 +29,12 @@ async def create_article(
     user_id: int = Depends(get_current_user_id)
 ):
     article = await ctrl.create_article(
-        db, user_id, data.title, data.description, data.body, data.tagList
+        db,
+        user_id,
+        data.title,
+        data.description,
+        data.body,
+        data.tagList
     )
     return ArticleOut.model_validate(article)
 
@@ -57,7 +62,10 @@ async def list_articles(
     summary="Получение статьи",
     description="Возвращает статью по уникальному slug."
 )
-async def get_article(slug: str, db: AsyncSession = Depends(get_async_session)):
+async def get_article(
+    slug: str,
+    db: AsyncSession = Depends(get_async_session)
+):
     article = await ctrl.get_article_by_slug(db, slug)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
@@ -80,6 +88,7 @@ async def update_article(
     article = await ctrl.get_article_by_slug(db, slug)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
+
     check_author(article, user_id)
 
     updated = await ctrl.update_article(
@@ -91,6 +100,7 @@ async def update_article(
         body=data.body,
         tag_list=data.tagList
     )
+
     return ArticleOut.model_validate(updated)
 
 
@@ -109,7 +119,9 @@ async def delete_article(
     article = await ctrl.get_article_by_slug(db, slug)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
+
     check_author(article, user_id)
 
     await ctrl.delete_article(db, slug, user_id)
+
     return {"detail": "Article deleted successfully"}

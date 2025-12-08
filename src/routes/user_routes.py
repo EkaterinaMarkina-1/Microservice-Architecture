@@ -12,18 +12,16 @@ from src.controllers.user_controller import (
     update_user,
     delete_user as delete_user_ctrl
 )
+from src.utils.auth import get_current_user_id, check_author
 
 router = APIRouter(prefix="/api", tags=["Users"])
 
 
-async def get_current_user(x_token: Optional[str] = Header(None), db: AsyncSession = Depends(get_async_session)):
-    if not x_token:
-        raise HTTPException(status_code=401, detail="Token missing")
-    payload = decode_access_token(x_token)
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    return await get_user_by_id(db, int(user_id))
+async def get_current_user(
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_async_session),
+) -> UserOut:
+    return await get_user_by_id(db, user_id)
 
 
 #  Регистрация
