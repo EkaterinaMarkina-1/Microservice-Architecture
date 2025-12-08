@@ -22,7 +22,7 @@ def create_app() -> FastAPI:
     app.include_router(user_routes.router)
     app.include_router(article_routes.router)
     app.include_router(comment_routes.router)
-    app.include_router(tag_routes.router)
+    # app.include_router(tag_routes.router)
 
     # 🔥 ВАЖНО — добавляем хук для создания таблиц
     @app.on_event("startup")

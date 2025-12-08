@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from src.database import Base
 from .association import article_tags
 
+
 class Tag(Base):
     __tablename__ = "tags"
 
@@ -13,5 +14,5 @@ class Tag(Base):
         "Article",
         secondary=article_tags,
         back_populates="tags",
-        passive_deletes=True 
+        passive_deletes=True
     )
