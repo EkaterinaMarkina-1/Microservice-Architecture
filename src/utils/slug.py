@@ -30,7 +30,6 @@ def slugify(text: str) -> str:
     # Заменяем всё, что не буквы или цифры, на дефис
     text = re.sub(r"[^a-z0-9]+", "-", text)
 
-    # Убираем дефисы по краям и двойные дефисы
     text = re.sub(r"-{2,}", "-", text).strip("-")
 
     return text
