@@ -9,7 +9,6 @@ from src.utils.security import hash_password, verify_password
 
 # ------------------ CREATE USER ------------------
 async def create_user(db: AsyncSession, data: UserCreate) -> User:
-    # Проверка на email
     existing = await get_user_by_email(db, data.email)
     if existing:
         raise HTTPException(
