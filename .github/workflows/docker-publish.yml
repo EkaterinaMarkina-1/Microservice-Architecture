@@ -31,6 +31,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            microservice-architecture:latest
-            microservice-architecture:${{ github.sha }}
-            microservice-architecture:${{ github.ref_name }}
+            markinaekaterina/microservice-architecture:latest
+            markinaekaterina/microservice-architecture:${{ github.sha }}
+            markinaekaterina/microservice-architecture:${{ github.ref_name }}
