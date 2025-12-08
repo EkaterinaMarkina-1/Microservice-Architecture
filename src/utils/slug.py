@@ -1,6 +1,5 @@
 import re
 
-# Таблица транслитерации кириллицы в латиницу
 CYRILLIC_MAP = {
     "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
     "ж": "zh", "з": "z", "и": "i", "й": "i", "к": "k", "л": "l", "м": "m",
@@ -11,13 +10,6 @@ CYRILLIC_MAP = {
 
 
 def slugify(text: str) -> str:
-    """
-    Преобразует строку в URL-friendly slug.
-
-    Примеры:
-        "Микросервисная архитектура!" -> "mikroservisnaya-arkhitektura"
-        "Hello World" -> "hello-world"
-    """
     if not text:
         return ""
 
