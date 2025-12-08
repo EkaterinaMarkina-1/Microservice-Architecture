@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.database import init_db
-from src.routes import user_routes, article_routes, comment_routes, tag_routes
+from src.routes import user_routes, article_routes, comment_routes
 
 
 def create_app() -> FastAPI:
@@ -22,9 +22,7 @@ def create_app() -> FastAPI:
     app.include_router(user_routes.router)
     app.include_router(article_routes.router)
     app.include_router(comment_routes.router)
-    # app.include_router(tag_routes.router)
 
-    # 🔥 ВАЖНО — добавляем хук для создания таблиц
     @app.on_event("startup")
     async def startup_event():
         await init_db()

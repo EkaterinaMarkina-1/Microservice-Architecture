@@ -53,7 +53,7 @@ class UserOut(BaseModel):
         None, description="URL аватара пользователя")
 
     class Config:
-        orm_mode = True  # Нужно для совместимости с SQLAlchemy ORM
+        orm_mode = True
 
 
 class ProfileOut(BaseModel):

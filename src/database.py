@@ -5,7 +5,6 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv
 
-# Загружаем переменные из .env
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -33,7 +32,7 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 async def init_db():
     """Создаёт все таблицы при старте приложения"""
     try:
-        from src.models import User, Article, Comment, Tag, article_tags  # импорт моделей здесь
+        from src.models import User, Article, Comment, Tag, article_tags
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         print("База данных инициализирована успешно!")

@@ -4,18 +4,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_async_session
 from src.controllers import article_controller as ctrl
-from src.schemas.article_schemas import (
-    ArticleCreate,
-    ArticleUpdate,
-    ArticleOut,
-    ArticleListItem
-)
+from src.schemas.article_schemas import ArticleCreate, ArticleUpdate, ArticleOut, ArticleListItem
+from src.schemas.common import PaginatedResponse, PaginationMeta
 from src.utils.auth import get_current_user_id, check_author
 
 router = APIRouter(prefix="/api/articles", tags=["Articles"])
 
-
 # ------------------ CREATE ARTICLE ------------------
+
+
 @router.post(
     "/",
     response_model=ArticleOut,
@@ -38,11 +35,12 @@ async def create_article(
     )
     return ArticleOut.model_validate(article)
 
+# ------------------ LIST ARTICLES (с пагинацией) ------------------
 
-# ------------------ LIST ARTICLES ------------------
+
 @router.get(
     "/",
-    response_model=List[ArticleListItem],
+    response_model=PaginatedResponse[ArticleListItem],
     summary="Список статей",
     description="Возвращает список статей с поддержкой пагинации."
 )
@@ -51,11 +49,19 @@ async def list_articles(
     per_page: int = Query(15, ge=1, le=50),
     db: AsyncSession = Depends(get_async_session)
 ):
-    articles, _, _ = await ctrl.list_articles(db, page, per_page)
-    return [ArticleListItem.model_validate(a) for a in articles]
-
+    articles, total_items, total_pages = await ctrl.list_articles(db, page, per_page)
+    items = [ArticleListItem.model_validate(a) for a in articles]
+    meta = PaginationMeta(
+        page=page,
+        per_page=per_page,
+        total_items=total_items,
+        total_pages=total_pages
+    )
+    return PaginatedResponse(items=items, meta=meta)
 
 # ------------------ GET ARTICLE BY SLUG ------------------
+
+
 @router.get(
     "/{slug}",
     response_model=ArticleOut,
@@ -71,8 +77,9 @@ async def get_article(
         raise HTTPException(status_code=404, detail="Article not found")
     return ArticleOut.model_validate(article)
 
-
 # ------------------ UPDATE ARTICLE ------------------
+
+
 @router.put(
     "/{slug}",
     response_model=ArticleOut,
@@ -100,11 +107,11 @@ async def update_article(
         body=data.body,
         tag_list=data.tagList
     )
-
     return ArticleOut.model_validate(updated)
 
-
 # ------------------ DELETE ARTICLE ------------------
+
+
 @router.delete(
     "/{slug}",
     response_model=dict,
@@ -121,7 +128,5 @@ async def delete_article(
         raise HTTPException(status_code=404, detail="Article not found")
 
     check_author(article, user_id)
-
     await ctrl.delete_article(db, slug, user_id)
-
     return {"detail": "Article deleted successfully"}
