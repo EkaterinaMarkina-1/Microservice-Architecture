@@ -5,7 +5,6 @@ from .tag import Tag
 from .association import article_tags
 
 __all__ = [
-    "User",
     "Article",
     "Comment",
     "Tag",
