@@ -1,13 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.database import init_db
-from src.routes import user_routes, article_routes, comment_routes
+from src.routes import user_routes
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="Blog API",
-        description="API для управления пользователями, статьями и комментариями в блог-платформе.",
+        root_path="/users",
+        title="Users Service API",
+        description="Отдельный микросервис для управления пользователями",
         version="1.0.0",
     )
 
@@ -19,15 +20,11 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    app.include_router(user_routes.router)
-    app.include_router(article_routes.router)
-    app.include_router(comment_routes.router)
+    
+setup_exception_handlers(app)
+app.include_router(user_routes.router)
 
-    @app.on_event("startup")
-    async def startup_event():
-        await init_db()
-
-    return app
-
-
-app = create_app()
+@app.get("/health", tags=["health"],
+         summary="Проверить состояние сервиса", description="Возвращает статус работы сервиса.")
+def health():
+    return {"status": "ok"}

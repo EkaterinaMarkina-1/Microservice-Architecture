@@ -18,15 +18,3 @@ class User(Base):
     deleted_at = Column(DateTime, nullable=True)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow,
                         onupdate=datetime.utcnow, nullable=False)
-
-    articles = relationship(
-        "Article",
-        back_populates="author",
-        cascade="all, delete-orphan"
-    )
-
-    comments = relationship(
-        "Comment",
-        back_populates="author",
-        cascade="all, delete-orphan"
-    )

@@ -2,10 +2,7 @@ import os
 from typing import AsyncGenerator
 from dotenv import load_dotenv
 
-from sqlalchemy.ext.asyncio import (
-    create_async_engine,
-    AsyncSession,
-)
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -14,7 +11,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set for users_service")
+    raise RuntimeError("DATABASE_URL is not set")
 
 Base = declarative_base()
 
@@ -35,15 +32,12 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db():
-    """
-    Создаёт таблицы users при старте users_service
-    """
     try:
-        from src.models import User
+        from src.models import Article, Comment, Tag, article_tags
 
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-        print("Users DB initialized")
+        print("Backend DB initialized")
     except SQLAlchemyError as e:
-        print(f"Users DB init error: {e}")
+        print(f"Backend DB init error: {e}")

@@ -16,8 +16,7 @@ class Article(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_deleted = Column(Boolean, default=False)
 
-    author_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    author = relationship("User", back_populates="articles")
+    author_id = Column(Integer, nullable=False)
 
     comments = relationship(
         "Comment",
