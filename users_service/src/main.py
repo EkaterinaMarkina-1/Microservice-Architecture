@@ -5,10 +5,12 @@ from src.routes import user_routes
 
 
 app = FastAPI(
-    root_path="/users",
     title="Users Service API",
     description="Отдельный микросервис для управления пользователями",
     version="1.0.0",
+    docs_url="/docs",
+    openapi_url="/openapi.json",
+    root_path="/users"
 )
 
 app.add_middleware(
