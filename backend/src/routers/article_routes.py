@@ -2,17 +2,15 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database import get_async_session
-from src.controllers import article_controller as ctrl
-from src.schemas.article_schemas import ArticleCreate, ArticleUpdate, ArticleOut, ArticleListItem
 from src.schemas.common import PaginatedResponse, PaginationMeta
-from src.utils.auth import get_current_user_id, check_author
+from src.schemas.article_schemas import ArticleCreate, ArticleUpdate, ArticleOut, ArticleListItem
+
+from src.controllers import article_controller as ctrl
+from src.database import get_async_session
 
 router = APIRouter(prefix="/api/articles", tags=["Articles"])
 
 # ------------------ CREATE ARTICLE ------------------
-
-
 @router.post(
     "/",
     response_model=ArticleOut,
@@ -23,7 +21,7 @@ router = APIRouter(prefix="/api/articles", tags=["Articles"])
 async def create_article(
     data: ArticleCreate,
     db: AsyncSession = Depends(get_async_session),
-    user_id: int = Depends(get_current_user_id)
+    # user_id: int = Depends(get_current_user_id)  # Раскомментировать, когда будет аутентификация
 ):
     article = await ctrl.create_article(
         db,
@@ -35,9 +33,8 @@ async def create_article(
     )
     return ArticleOut.model_validate(article)
 
+
 # ------------------ LIST ARTICLES (с пагинацией) ------------------
-
-
 @router.get(
     "/",
     response_model=PaginatedResponse[ArticleListItem],
@@ -59,9 +56,8 @@ async def list_articles(
     )
     return PaginatedResponse(items=items, meta=meta)
 
+
 # ------------------ GET ARTICLE BY SLUG ------------------
-
-
 @router.get(
     "/{slug}",
     response_model=ArticleOut,
@@ -77,9 +73,8 @@ async def get_article(
         raise HTTPException(status_code=404, detail="Article not found")
     return ArticleOut.model_validate(article)
 
+
 # ------------------ UPDATE ARTICLE ------------------
-
-
 @router.put(
     "/{slug}",
     response_model=ArticleOut,
@@ -90,13 +85,13 @@ async def update_article(
     slug: str,
     data: ArticleUpdate,
     db: AsyncSession = Depends(get_async_session),
-    user_id: int = Depends(get_current_user_id)
+    # user_id: int = Depends(get_current_user_id)
 ):
     article = await ctrl.get_article_by_slug(db, slug)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
 
-    check_author(article, user_id)
+    check_author(article, user_id)  # Функция проверки автора должна быть определена
 
     updated = await ctrl.update_article(
         db,
@@ -109,9 +104,8 @@ async def update_article(
     )
     return ArticleOut.model_validate(updated)
 
+
 # ------------------ DELETE ARTICLE ------------------
-
-
 @router.delete(
     "/{slug}",
     response_model=dict,
@@ -121,7 +115,7 @@ async def update_article(
 async def delete_article(
     slug: str,
     db: AsyncSession = Depends(get_async_session),
-    user_id: int = Depends(get_current_user_id)
+    # user_id: int = Depends(get_current_user_id)
 ):
     article = await ctrl.get_article_by_slug(db, slug)
     if not article:

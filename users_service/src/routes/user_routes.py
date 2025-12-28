@@ -12,7 +12,7 @@ from src.controllers.user_controller import (
     update_user,
     delete_user as delete_user_ctrl
 )
-from src.utils.auth import get_current_user_id, check_author
+from utils.auth import get_current_user_id, check_author
 
 router = APIRouter(prefix="/api", tags=["Users"])
 

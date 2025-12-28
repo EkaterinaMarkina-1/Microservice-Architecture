@@ -21,7 +21,7 @@ class PaginationMeta(BaseModel):
                              description="Общее количество страниц", example=5)
 
 
-class PaginatedResponse(ListResponse):
+class PaginatedResponse(ListResponse[T], Generic[T]):
     '''Схема ответа с пагинацией'''
     meta: PaginationMeta = Field(..., description="Метаданные пагинации")
 

@@ -53,7 +53,7 @@ class UserOut(BaseModel):
         None, description="URL аватара пользователя")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ProfileOut(BaseModel):
@@ -63,7 +63,7 @@ class ProfileOut(BaseModel):
     image_url: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
     @classmethod
     def from_user(cls, user: Optional[User]) -> "ProfileOut":

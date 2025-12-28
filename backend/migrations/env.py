@@ -1,5 +1,3 @@
-from src.models import *
-from src.database import Base, DATABASE_URL
 import asyncio
 from logging.config import fileConfig
 import os
@@ -13,15 +11,15 @@ from alembic import context
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from src.database import Base, DATABASE_URL
+from src.models import *
 
 config = context.config
-config.set_main_option("sqlalchemy.url", os.getenv(
-    "DATABASE_URL", DATABASE_URL))
+config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL", DATABASE_URL))
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
-
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
