@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from src.utils.auth import get_current_user_id
 from src.schemas.common import PaginatedResponse, PaginationMeta
 from src.schemas.article_schemas import ArticleCreate, ArticleUpdate, ArticleOut, ArticleListItem
 
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/articles", tags=["Articles"])
 async def create_article(
     data: ArticleCreate,
     db: AsyncSession = Depends(get_async_session),
-    # user_id: int = Depends(get_current_user_id)  # Раскомментировать, когда будет аутентификация
+    user_id: int = Depends(get_current_user_id) 
 ):
     article = await ctrl.create_article(
         db,
@@ -85,7 +85,7 @@ async def update_article(
     slug: str,
     data: ArticleUpdate,
     db: AsyncSession = Depends(get_async_session),
-    # user_id: int = Depends(get_current_user_id)
+    user_id: int = Depends(get_current_user_id)
 ):
     article = await ctrl.get_article_by_slug(db, slug)
     if not article:
@@ -115,7 +115,7 @@ async def update_article(
 async def delete_article(
     slug: str,
     db: AsyncSession = Depends(get_async_session),
-    # user_id: int = Depends(get_current_user_id)
+    user_id: int = Depends(get_current_user_id)
 ):
     article = await ctrl.get_article_by_slug(db, slug)
     if not article:

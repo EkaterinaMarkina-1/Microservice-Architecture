@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.utils.auth import get_current_user_id
 from src.database import get_async_session
 from src.controllers import comment_controller, article_controller
 from src.schemas.comment_schemas import CommentCreate, CommentOut
@@ -24,7 +25,7 @@ async def create_comment(
     slug: str,
     data: CommentCreate,
     db: AsyncSession = Depends(get_async_session),
-    # user_id: int = Depends(get_current_user_id)
+    user_id: int = Depends(get_current_user_id)
 ):
     article = await article_controller.get_article_by_slug(db, slug)
     if not article:
@@ -69,7 +70,7 @@ async def delete_comment(
     slug: str,
     comment_id: int,
     db: AsyncSession = Depends(get_async_session),
-    # user_id: int = Depends(get_current_user_id)
+    user_id: int = Depends(get_current_user_id)
 ):
     article = await article_controller.get_article_by_slug(db, slug)
     if not article:

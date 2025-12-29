@@ -32,9 +32,7 @@ async def get_comments_for_article(
 ) -> List[Comment]:
     q = await db.execute(
         select(Comment)
-        .where(Comment.article_id == article_id)
-        .options(selectinload(Comment.author))  # если нужно подгружать автора
-    )
+        .where(Comment.article_id == article_id))
     return q.scalars().all()
 
 
