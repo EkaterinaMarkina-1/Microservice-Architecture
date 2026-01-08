@@ -43,7 +43,7 @@ async def init_db():
         from src.models.article import Article
         from src.models.comment import Comment
         from src.models.tag import Tag
-        from src.models.association import article_tags  # таблица связи многие-ко-многим
+        from src.models.association import article_tags 
 
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
