@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.database import init_db
+from src.routers import subscription as subscription_routes
 from src.routes import user_routes
 
 

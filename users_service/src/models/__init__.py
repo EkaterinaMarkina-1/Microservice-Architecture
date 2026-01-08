@@ -1,5 +1,4 @@
 from .user import User
+from .subscriber import Subscriber
 
-__all__ = [
-    "User"
-]
+__all__ = ["User", "Subscriber"]

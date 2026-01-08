@@ -1,5 +1,6 @@
+from typing import Optional
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime
 from src.database import Base
 
@@ -18,3 +19,5 @@ class User(Base):
     deleted_at = Column(DateTime, nullable=True)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow,
                         onupdate=datetime.utcnow, nullable=False)
+
+    subscription_key: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

@@ -40,7 +40,7 @@ class UserUpdate(BaseModel):
         None, example="Обновленная биография", description="Обновленная биография")
     image_url: Optional[str] = Field(
         None, example="https://example.com/new_avatar.jpg", description="Новый URL аватара")
-
+    model_config = ConfigDict(extra="forbid")
 
 class UserOut(BaseModel):
     """Схема вывода данных авторизованного пользователя"""
@@ -51,7 +51,11 @@ class UserOut(BaseModel):
     bio: Optional[str] = Field(None, description="Краткая биография")
     image_url: Optional[str] = Field(
         None, description="URL аватара пользователя")
-
+    subscription_key: Optional[str] = Field(
+        None,
+        description="Ключ для получения push-уведомлений",
+        example="bb779f9b-44b3-48e7-9576-bbdf7884cbb1"
+    )
     class Config:
         from_attributes = True
 

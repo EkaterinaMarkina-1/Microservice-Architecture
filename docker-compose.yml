@@ -35,6 +35,24 @@ services:
       timeout: 5s
       retries: 5
 
+  # ---------- REDIS (BROKER) ----------
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    networks:
+      - internal
+    ports:
+      - "6379:6379"
+
+  # ---------- PUSH NOTIFICATOR ----------
+  push-notificator:
+    image: ghcr.io/ayusavin/push-notification-playground:1.0.0
+    container_name: push_notificator
+    ports:
+      - "8002:8000"
+    networks:
+      - internal
+
   # ---------- BACKEND ----------
   backend:
     build: ./backend
@@ -44,6 +62,8 @@ services:
     depends_on:
       db-main:
         condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - internal
     expose:
@@ -74,12 +94,26 @@ services:
       - "8001:8000"
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000
     volumes:
-    - ./users_service/migrations:/app/migrations
+      - ./users_service/migrations:/app/migrations
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ---------- WORKER ----------
+  worker:
+    build: ./worker
+    container_name: worker
+    env_file:
+      - ./worker/.env
+    depends_on:
+      redis:
+        condition: service_started
+      push-notificator:
+        condition: service_started
+    networks:
+      - internal
 
   # ---------- API GATEWAY ----------
   api-gateway:
