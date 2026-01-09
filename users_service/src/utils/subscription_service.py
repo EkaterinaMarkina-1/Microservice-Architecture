@@ -1,28 +1,70 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select, insert, delete, update
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from src.repositories.subscriber_repository import SubscriberRepository
-from src.repositories.user_repository import UserRepository
 from src.models.user import User
-from src.core.errors.exceptions import NotFoundException, ConflictException, ValidationException
-
+from src.models.subscriber import Subscriber
 
 class SubscriptionService:
     def __init__(self, db: AsyncSession):
-        self.sub_repo = SubscriberRepository(db)
-        self.user_repo = UserRepository(db)
+        self.db = db
 
-    async def subscribe_to_author(self, subscriber: User, target_user_id: int) -> None:
-        if subscriber.id == target_user_id:
-            raise ValidationException("Нельзя подписаться на самого себя")
-        if not await self.user_repo.get_by_id(target_user_id):
-            raise NotFoundException("Пользователь-автор не найден")
+    # --- Подписка на автора ---
+    async def subscribe_to_author(self, subscriber_id: int, target_user_id: int):
+        if subscriber_id == target_user_id:
+            raise ValueError("Нельзя подписаться на самого себя")
+
+        # Проверяем, существует ли автор
+        author = await self.db.execute(
+            select(User).where(User.id == target_user_id)
+        )
+        author_obj = author.scalar_one_or_none()
+        if not author_obj:
+            raise KeyError("Пользователь-автор не найден")
+
+        # Пробуем вставить подписку
         try:
-            await self.sub_repo.subscribe(subscriber.id, target_user_id)
+            stmt = insert(Subscriber).values(
+                subscriber_id=subscriber_id,
+                author_id=target_user_id
+            )
+            await self.db.execute(stmt)
+            await self.db.commit()
         except IntegrityError:
-            raise ConflictException("Вы уже подписаны на этого пользователя")
+            await self.db.rollback()
+            raise RuntimeError("Вы уже подписаны на этого пользователя")
 
-    async def unsubscribe_from_author(self, subscriber: User, target_user_id: int) -> None:
-        rowcount = await self.sub_repo.unsubscribe(subscriber.id, target_user_id)
-        if rowcount == 0:
-            raise NotFoundException("Подписка не найдена")
+    # --- Отписка от автора ---
+    async def unsubscribe_from_author(self, subscriber_id: int, target_user_id: int) -> None:
+        stmt = delete(Subscriber).where(
+            Subscriber.subscriber_id == subscriber_id,
+            Subscriber.author_id == target_user_id
+        )
+        result = await self.db.execute(stmt)
+        await self.db.commit()
+        if result.rowcount == 0:
+            raise KeyError("Подписка не найдена")
+
+    async def update_subscription_key(self, user_id: int, subscription_key: str):
+        """
+        Обновляет subscription_key у пользователя и возвращает объект User
+        """
+        try:
+            stmt = (
+                update(User)
+                .where(User.id == user_id)
+                .values(subscription_key=subscription_key)
+                .returning(User)  # важно!
+            )
+            result = await self.db.execute(stmt)
+            await self.db.commit()
+            user = result.scalar_one_or_none()
+
+            if not user:
+                raise KeyError(f"Пользователь с id={user_id} не найден")
+
+            return user  # ORM объект User
+
+        except SQLAlchemyError as e:
+            await self.db.rollback()
+            raise RuntimeError(f"Ошибка при обновлении ключа подписки: {e}")

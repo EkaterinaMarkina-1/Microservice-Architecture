@@ -43,6 +43,11 @@ services:
       - internal
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ---------- PUSH NOTIFICATOR ----------
   push-notificator:
@@ -63,14 +68,24 @@ services:
       db-main:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     networks:
       - internal
+    working_dir: /app
     expose:
       - "8000"
     ports:
       - "8000:8000"
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000
+    command: |
+      sh -c "
+      until pg_isready -h postgres-main -p 5432 -U blog_user; do
+        echo 'Waiting for postgres-main...'
+        sleep 2
+      done
+      alembic revision --autogenerate -m 'autogen migration' &&
+      alembic upgrade head &&
+      uvicorn main:app --host 0.0.0.0 --port 8000
+      "
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -88,11 +103,21 @@ services:
         condition: service_healthy
     networks:
       - internal
+    working_dir: /app
     expose:
       - "8000"
     ports:
       - "8001:8000"
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000
+    command: |
+      sh -c "
+      until pg_isready -h postgres-users -p 5432 -U blog_user; do
+        echo 'Waiting for postgres-users...'
+        sleep 2
+      done
+      alembic revision --autogenerate -m 'autogen migration' &&
+      alembic upgrade head &&
+      uvicorn main:app --host 0.0.0.0 --port 8000
+      "
     volumes:
       - ./users_service/migrations:/app/migrations
     healthcheck:
@@ -104,16 +129,24 @@ services:
   # ---------- WORKER ----------
   worker:
     build: ./worker
-    container_name: worker
+    container_name: blog_worker
     env_file:
       - ./worker/.env
+    environment:
+      USERS_DATABASE_URL: postgresql+psycopg2://blog_user:blog_password@db-users:5432/users_db
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       redis:
-        condition: service_started
-      push-notificator:
-        condition: service_started
+        condition: service_healthy
+      db-main:
+        condition: service_healthy
+      db-users:
+        condition: service_healthy
     networks:
       - internal
+    working_dir: /app
+    command: celery -A celery_app worker -l info
+
 
   # ---------- API GATEWAY ----------
   api-gateway:

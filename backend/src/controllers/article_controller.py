@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from src.models import Article, Tag
 from src.utils.slug import slugify
+from src.utils.tasks import notify_followers
 
 # ------------------ INTERNAL: PROCESS TAGS ------------------
 
@@ -58,8 +59,13 @@ async def create_article(
     db.add(article)
     await db.commit()
     await db.refresh(article)
-    return article
 
+    notify_followers.delay(
+            author_id=user_id,
+            post_id=article.id,
+            post_title= article.title
+    )
+    return article
 
 # ------------------ GET ARTICLE BY SLUG ------------------
 async def get_article_by_slug(db: AsyncSession, slug: str, raise_if_missing: bool = True) -> Optional[Article]:

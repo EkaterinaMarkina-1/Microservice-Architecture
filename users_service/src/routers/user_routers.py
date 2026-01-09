@@ -14,7 +14,7 @@ from src.controllers.user_controller import (
 )
 from utils.auth import get_current_user_id, check_author
 
-router = APIRouter(prefix="/api", tags=["Users"])
+router = APIRouter(prefix="/api", tags=["users"])
 
 
 async def get_current_user(

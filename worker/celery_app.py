@@ -16,3 +16,4 @@ celery_app.conf.update(
     worker_concurrency=4,
     task_acks_late=True,
 )
+import tasks 

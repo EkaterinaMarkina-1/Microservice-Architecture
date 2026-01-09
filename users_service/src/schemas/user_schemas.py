@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from src.models.user import User
 
 
@@ -44,6 +44,7 @@ class UserUpdate(BaseModel):
 
 class UserOut(BaseModel):
     """Схема вывода данных авторизованного пользователя"""
+    id: int
     updated_at: datetime = Field(...,
                                  description="Дата и время последнего обновления")
     email: EmailStr = Field(..., description="Электронная почта пользователя")
